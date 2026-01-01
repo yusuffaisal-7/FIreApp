@@ -14,6 +14,7 @@
 # 🔥 FireGuard AI: End-to-End Fire Detection System
 > **Production-Grade Computer Vision & Deep Learning Application**
 > *Powered by Foxmen Studio | Engineered by Yousuf H Faysal*
+> 🟢 **[LIVE DEMO: CLICK TO VIEW APP](https://fireapp-yhfaysal.streamlit.app/)**
 
 ![FireGuard Banner](assets/banner.png)
 
