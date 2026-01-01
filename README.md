@@ -212,3 +212,6 @@ python3 -m streamlit run app.py
 ---
 
 > This documentation is designed to act as a complete reference for technical interviews. It proves understanding of not just "how to run code", but *why* specific engineering choices were made at every layer of the stack.
+---
+
+> **Deployment Note**: This application uses `streamlit-webrtc` for cloud compatibility. To deploy, simply push to GitHub and connect to [Streamlit Cloud](https://streamlit.io/cloud). System dependencies are handled via `packages.txt`.

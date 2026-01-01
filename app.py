@@ -7,6 +7,8 @@ from tensorflow.keras.models import load_model
 import tempfile
 import os
 import time
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration, VideoProcessorBase
+import av
 
 # Set page configuration with a custom title and icon
 st.set_page_config(
@@ -187,6 +189,41 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
 
+    /* --- MOBILE RESPONSIVENESS --- */
+    @media only screen and (max-width: 768px) {
+        /* Typography Scale */
+        h1 { font-size: 1.8rem !important; }
+        h2 { font-size: 1.4rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        p, .stMarkdown { font-size: 0.9rem !important; }
+        
+        /* Layout Adjustments */
+        [data-testid="stSidebar"] {
+            width: 100% !important; /* Full width sidebar on mobile open */
+        }
+        
+        /* Footer Stack */
+        .footer {
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.7rem;
+            padding: 15px 0;
+        }
+        
+        /* Buttons touch-friendly */
+        .stButton > button {
+            width: 100%;
+            padding: 15px 10px;
+            font-size: 1rem;
+        }
+        
+        /* Hide complex backgrounds to save battery/perf */
+        .stApp {
+            background-image: none;
+            background-color: var(--bg-color);
+        }
+    }
+
     /* Hide Streamlit Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -240,10 +277,8 @@ def detect_screen_pattern(frame):
 def detect_fire_heuristic_smart(frame):
     """(SMART) Distinguishes screens"""
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # Similar ranges to balanced
-    lower, upper = np.array([0, 80, 80]), np.array([10, 255, 255]) # Simple combined for brevity or full list
-    mask = cv2.inRange(hsv, np.array([0, 80, 80]), np.array([35, 255, 255])) # Simplified range covering red-yellow
-    # Add high red
+    lower, upper = np.array([0, 80, 80]), np.array([10, 255, 255]) 
+    mask = cv2.inRange(hsv, np.array([0, 80, 80]), np.array([35, 255, 255])) 
     mask += cv2.inRange(hsv, np.array([170, 80, 80]), np.array([180, 255, 255]))
     
     pct = (cv2.countNonZero(mask) / (frame.shape[0] * frame.shape[1])) * 100
@@ -274,6 +309,12 @@ def predict_dl_model(model, frame):
         return prob > 0.5, prob
     except:
         return False, 0.0
+
+# --- GLOBAL STATE FOR WEBRTC ---
+# We use a global class to hold params because VideoProcessor is instantiated by webrtc_streamer
+class ProcessorSettings:
+    model_option = "Heuristic (Smart + Anti-Screen)"
+    active_model = None
 
 # --- UI VISUALS ---
 
@@ -306,7 +347,7 @@ def draw_hud(frame, is_fire, confidence, label_text=""):
 
     # Alert Overlay
     if is_fire:
-        cv2.rectangle(overlay, (0, 0), (width, height), color_danger, -1)
+        cv2.rectangle(overlay, (0, 0), (width, height), active_color, -1)
         cv2.addWeighted(overlay, 0.2, frame, 0.8, 0, frame)
 
     # Text Badge
@@ -328,6 +369,40 @@ def draw_hud(frame, is_fire, confidence, label_text=""):
     cv2.rectangle(frame, (30, height - 25), (30 + filled, height - 15), active_color, -1)
 
     return frame
+
+# --- WEBRTC PROCESSOR ---
+class FireDetectionProcessor(VideoProcessorBase):
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        # Mirror for UX
+        img = cv2.flip(img, 1)
+        
+        # Access global settings (simple way for Streamlit script model)
+        # Note: In a robust multi-user prod app we might pass args via factory
+        model_opt = ProcessorSettings.model_option
+        act_model = ProcessorSettings.active_model
+        
+        is_fire, conf = False, 0.0
+        label = ""
+        
+        if "Deep Learning" in model_opt and act_model:
+            is_fire, raw = predict_dl_model(act_model, img)
+            conf = raw * 100
+            label = "CNN"
+        elif "Smart" in model_opt:
+            is_fire, conf, is_screen = detect_fire_heuristic_smart(img)
+            label = "SMART" + (" (SCREEN)" if is_screen else "")
+        elif "Balanced" in model_opt:
+            is_fire, conf = detect_fire_heuristic_balanced(img)
+            label = "BALANCED"
+        else:
+            is_fire, conf = detect_fire_heuristic_conservative(img)
+            label = "FAST"
+            
+        img = draw_hud(img, is_fire, conf, label)
+        
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # --- MAIN ---
 
@@ -364,6 +439,10 @@ def main():
                 st.sidebar.error("❌ Model not found! Switching to Heuristic.")
                 model_option = "Heuristic (Smart + Anti-Screen)"
 
+    # Update Global Settings for WebRTC
+    ProcessorSettings.model_option = model_option
+    ProcessorSettings.active_model = active_model
+
     if app_mode == "Dashboard":
         st.markdown(f"""
             <div style="padding: 40px; border: 1px solid rgba(255, 61, 0, 0.2); background: linear-gradient(135deg, rgba(20,20,20,0.8), rgba(10,10,10,0.9)); border-radius: 10px; text-align: center; margin-bottom: 30px;">
@@ -371,7 +450,6 @@ def main():
                 <p style="font-size: 1.2rem; color: #888; max-width: 600px; margin: 0 auto;">NEXT-GENERATION SURVEILLANCE SUITE</p>
             </div>
         """, unsafe_allow_html=True)
-        # Using width="stretch" to fix warning
         st.image("https://images.unsplash.com/photo-1542317854-f9596afbd6cb", width="stretch", caption="SYSTEM ONLINE") 
 
     elif app_mode == "Video Analysis":
@@ -413,40 +491,18 @@ def main():
 
     elif app_mode == "Live Surveillance":
         st.markdown("<h3>LIVE FEED <span style='color:#00E5FF'>// ONLINE</span></h3>", unsafe_allow_html=True)
-        run = st.toggle("ACTIVATE CAMERA", value=True)
-        st_frame = st.empty()
+        st.info("Initiating WebRTC Stream... Please allow camera access.")
         
-        if run:
-            cap = cv2.VideoCapture(0)
-            while run:
-                ret, frame = cap.read()
-                if not ret: 
-                    st.error("NO SIGNAL")
-                    break
-                frame = cv2.flip(frame, 1)
-                
-                # Inference
-                is_fire, conf = False, 0.0
-                label = ""
-                
-                if "Deep Learning" in model_option and active_model:
-                    # Throttle DL prediction for perf? Here we do every frame for smoothness
-                    is_fire, raw = predict_dl_model(active_model, frame)
-                    conf = raw * 100
-                    label = "CNN"
-                elif "Smart" in model_option:
-                    is_fire, conf, is_screen = detect_fire_heuristic_smart(frame)
-                    label = "SMART" + (" (SCREEN)" if is_screen else "")
-                elif "Balanced" in model_option:
-                    is_fire, conf = detect_fire_heuristic_balanced(frame)
-                    label = "BALANCED"
-                else:
-                    is_fire, conf = detect_fire_heuristic_conservative(frame)
-                    label = "FAST"
-                
-                frame = draw_hud(frame, is_fire, conf, label)
-                st_frame.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), width="stretch")
-            cap.release()
+        # WebRTC Streamer
+        ctx = webrtc_streamer(
+            key="fire-detection",
+            video_processor_factory=FireDetectionProcessor,
+            rtc_configuration=RTCConfiguration(
+                {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+            ),
+            media_stream_constraints={"video": True, "audio": False},
+            async_processing=True,
+        )
 
     st.markdown("""
         <div class="footer">

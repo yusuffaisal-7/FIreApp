@@ -8,3 +8,6 @@ tensorflow>=2.6.0
 tqdm>=4.62.0
 scipy>=1.7.0
 glob2>=0.7
+streamlit-webrtc
+av
+opencv-python-headless
