@@ -224,9 +224,16 @@ st.markdown("""
         }
     }
 
-    /* Hide Streamlit Branding (Optional, keeping clean) */
+    /* Hide Streamlit Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+
+    /* --- DESKTOP: PIN SIDEBAR (Hide Toggle) --- */
+    @media (min-width: 769px) {
+        [data-testid="stSidebarCollapsedControl"] {
+            display: none !important;
+        }
+    }
 
 </style>
 """, unsafe_allow_html=True)
