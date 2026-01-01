@@ -15,6 +15,9 @@
 > **Production-Grade Computer Vision & Deep Learning Application**
 > *Powered by Foxmen Studio | Engineered by Yousuf H Faysal*
 
+![FireGuard Banner](assets/banner.png)
+
+
 ---
 
 ## 📖 Abstract & Project Scope

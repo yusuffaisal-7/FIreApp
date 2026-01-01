@@ -452,7 +452,12 @@ def main():
                 <p style="font-size: 1.2rem; color: #888; max-width: 600px; margin: 0 auto;">NEXT-GENERATION SURVEILLANCE SUITE</p>
             </div>
         """, unsafe_allow_html=True)
-        st.image("https://images.unsplash.com/photo-1542317854-f9596afbd6cb", width="stretch", caption="SYSTEM ONLINE") 
+        
+        # Use local banner if available, else fallback
+        if os.path.exists("assets/banner.png"):
+            st.image("assets/banner.png", width="stretch")
+        else:
+            st.image("https://images.unsplash.com/photo-1542317854-f9596afbd6cb", width="stretch", caption="SYSTEM ONLINE") 
 
     elif app_mode == "Video Analysis":
         st.markdown("<h3>VIDEO INGEST</h3>", unsafe_allow_html=True)
