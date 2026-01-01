@@ -2,8 +2,8 @@
 import streamlit as st
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
+# import tensorflow as tf (Lazy load this)
+# from tensorflow.keras.models import load_model (Lazy load this)
 import tempfile
 import os
 import time
@@ -292,6 +292,8 @@ def detect_fire_heuristic_smart(frame):
 
 @st.cache_resource
 def load_model_from_path(path):
+    # LAZY LOADING TO PREVENTS SEGFAULT ON STARTUP
+    from tensorflow.keras.models import load_model
     if os.path.exists(path):
         try:
             return load_model(path)
