@@ -227,7 +227,11 @@ st.markdown("""
     /* Hide Streamlit Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    
+    /* Make standard header transparent so we can see content, but keep button clickable */
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
 
 </style>
 """, unsafe_allow_html=True)
