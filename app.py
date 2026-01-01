@@ -228,9 +228,20 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Make standard header transparent so we can see content, but keep button clickable */
+    /* Make standard header transparent so we can see content */
     [data-testid="stHeader"] {
         background: transparent !important;
+    }
+    
+    /* FORCE SIDEBAR BUTTON VISIBILITY (Global) */
+    [data-testid="stSidebarCollapsedControl"] {
+        display: block !important;
+        color: white !important;
+        z-index: 1000000 !important;
+    }
+    
+    [data-testid="stSidebarCollapsedControl"] svg {
+        fill: white !important;
     }
 
 </style>
